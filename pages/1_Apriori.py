@@ -1,90 +1,93 @@
-# pages/1_📊_Apriori.py
 import streamlit as st
 import pandas as pd
 from algorithms.apriori import Apriori
+from sidebar import render_sidebar
 
-# --- Cấu hình trang ---
-st.set_page_config(page_title="Apriori Algorithm", layout="wide")
+# Cấu hình & Sidebar
+st.set_page_config(page_title="Apriori", layout="wide")
+render_sidebar()
 
-# --- CSS Tùy chỉnh (Mô phỏng lại giao diện design.html một chút) ---
+# CSS Tùy chỉnh
 st.markdown("""
 <style>
-    .main-header {font-size: 2.5rem; font-weight: 700; color: #fafafa; margin-bottom: 0.5rem;}
-    .sub-header {font-size: 1.1rem; color: #a3a8b4;}
-    .highlight-box {background-color: rgba(255, 75, 75, 0.1); border-left: 4px solid #ff4b4b; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;}
+    .main-header {font-size: 2.5rem; font-weight: 700; color: #31333f; margin-bottom: 0.5rem;}
+    .highlight-box {background-color: #f0f2f6; border-left: 4px solid #ff4b4b; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- Header ---
 st.markdown('<div class="main-header">Tập Phổ Biến & Luật Kết Hợp</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Khai phá các mẫu thường xuyên xuất hiện trong giao dịch</div>', unsafe_allow_html=True)
-st.divider()
 
-# --- Info Box ---
+# Hướng dẫn định dạng dữ liệu
 st.markdown("""
 <div class="highlight-box">
-    <b>💡 Giới thiệu thuật toán:</b><br>
-    Thuật toán Apriori giúp tìm ra các tập mặt hàng thường được mua cùng nhau. 
-    [cite_start]Ví dụ: 80% khách hàng mua bia thì sẽ mua thuốc lá[cite: 1609].
+    <b>💡 Lưu ý về dữ liệu:</b><br>
+    File CSV cần có 2 cột: <b>Mã giao dịch</b> và <b>Mã hàng</b> (dạng Transaction Format).<br>
+    Ví dụ:<br>
+    <code>01, i1</code><br>
+    <code>01, i2</code><br>
+    <code>02, i2</code>
 </div>
 """, unsafe_allow_html=True)
 
-# --- Layout chia 2 cột: Sidebar control và Main Content ---
-col1, col2 = st.columns([1, 2])
+col1, col2 = st.columns([1, 2], gap="large")
 
 with col1:
-    st.subheader("⚙️ Cấu hình tham số")
+    st.subheader("⚙️ Cấu hình")
     
-    # Upload file
-    uploaded_file = st.file_uploader("Nguồn dữ liệu (CSV)", type=['csv'])
+    # Chọn nguồn dữ liệu
+    data_source = st.radio("Nguồn dữ liệu:", ("Dữ liệu mẫu (Slide)", "Tải file CSV"))
     
-    # Nếu chưa có file thì dùng file mẫu
-    if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file)
+    df = None
+    if data_source == "Dữ liệu mẫu (Slide)":
+        try:
+            df = pd.read_csv("data/apriori_transaction.csv")
+            st.success("Đã tải dữ liệu mẫu.")
+        except FileNotFoundError:
+            st.error("Chưa tìm thấy file data/apriori_transaction.csv")
     else:
-        st.info("Đang sử dụng dữ liệu mẫu từ Slide")
-        df = pd.read_csv("data/apriori_transaction.csv")
+        uploaded_file = st.file_uploader("Upload CSV (2 cột)", type=['csv'])
+        if uploaded_file:
+            df = pd.read_csv(uploaded_file)
 
-    # Hiển thị bảng dữ liệu thô
-    with st.expander("👀 Xem dữ liệu đầu vào", expanded=True):
-        st.dataframe(df, hide_index=True)
+    # Hiển thị dữ liệu thô
+    if df is not None:
+        with st.expander("👀 Xem dữ liệu thô", expanded=True):
+            st.dataframe(df, hide_index=True, use_container_width=True)
 
-    # Input tham số
-    min_supp = st.slider("Min Support (%)", 0, 100, 40) / 100.0
-    min_conf = st.slider("Min Confidence (%)", 0, 100, 60) / 100.0
-
-    run_btn = st.button("▶️ Chạy thuật toán", type="primary")
+    # Tham số
+    min_supp = st.slider("Min Support", 0.0, 1.0, 0.4, 0.05)
+    min_conf = st.slider("Min Confidence", 0.0, 1.0, 0.7, 0.05)
+    
+    run_btn = st.button("▶️ Chạy thuật toán", type="primary", disabled=(df is None))
 
 with col2:
-    if run_btn:
-        with st.spinner('Đang tính toán...'):
-            # Gọi thuật toán từ file backend
+    st.subheader("📊 Kết quả")
+    
+    if run_btn and df is not None:
+        try:
+            # Chạy thuật toán
             model = Apriori(min_support=min_supp, min_confidence=min_conf)
             model.fit(df)
-            rules_df = model.generate_rules()
-
-        # Hiển thị kết quả bằng Tabs
-        tab1, tab2 = st.tabs(["📦 Tập phổ biến", "🔗 Luật kết hợp"])
-        
-        with tab1:
-            if not model.itemsets:
-                st.warning("Không tìm thấy tập phổ biến nào!")
-            else:
-                # Chuyển đổi itemsets thành DataFrame để hiển thị đẹp
-                itemsets_data = []
-                for items, supp in model.itemsets.items():
-                    itemsets_data.append({
-                        "Tập mặt hàng": ', '.join(items),
-                        "Kích thước": len(items),
-                        "Support": round(supp, 4)
-                    })
-                st.dataframe(pd.DataFrame(itemsets_data).sort_values(by="Support", ascending=False), use_container_width=True)
-
-        with tab2:
-            if rules_df.empty:
-                st.warning("Không tìm thấy luật kết hợp nào!")
-            else:
-                st.dataframe(rules_df, use_container_width=True)
-                st.metric("Số lượng luật tìm thấy", len(rules_df))
-    else:
-        st.info("👈 Hãy nhấn nút 'Chạy thuật toán' ở cột bên trái")
+            
+            # Lấy kết quả
+            itemsets = model.get_itemsets()
+            rules = model.generate_rules()
+            
+            tab1, tab2 = st.tabs(["📦 Tập phổ biến", "🔗 Luật kết hợp"])
+            
+            with tab1:
+                if not itemsets.empty:
+                    st.dataframe(itemsets, use_container_width=True)
+                    st.metric("Số lượng tập phổ biến", len(itemsets))
+                else:
+                    st.warning(f"Không tìm thấy tập phổ biến với Min Support = {min_supp}")
+            
+            with tab2:
+                if not rules.empty:
+                    st.dataframe(rules, use_container_width=True)
+                    st.metric("Số lượng luật", len(rules))
+                else:
+                    st.warning(f"Không tìm thấy luật với Min Confidence = {min_conf}")
+                    
+        except Exception as e:
+            st.error(f"Lỗi: {e}")
