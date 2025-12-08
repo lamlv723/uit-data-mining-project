@@ -4,11 +4,9 @@ import graphviz
 from algorithms.id3 import ID3DecisionTree
 from sidebar import render_sidebar
 
-# Cấu hình & Sidebar
 st.set_page_config(page_title="Cây Quyết Định (ID3)", layout="wide")
 render_sidebar()
 
-# CSS
 st.markdown("""
 <style>
     .main-header {font-size: 2.5rem; font-weight: 700; color: #31333f; margin-bottom: 0.5rem;}
@@ -19,20 +17,11 @@ st.markdown("""
 
 st.markdown('<div class="main-header">Cây Quyết Định (ID3)</div>', unsafe_allow_html=True)
 
-st.markdown("""
-<div class="highlight-box">
-    <b>💡 Hướng dẫn:</b><br>
-    1. Chọn dữ liệu huấn luyện để máy học và vẽ cây.<br>
-    2. Sau khi có cây, nhập thông tin vào form bên dưới để dự đoán kết quả.
-</div>
-""", unsafe_allow_html=True)
-
 col1, col2 = st.columns([1, 2], gap="large")
 
 with col1:
-    st.subheader("1. Huấn luyện mô hình")
+    st.subheader("1. Cấu hình Dữ liệu")
     
-    # Chọn dữ liệu
     data_source = st.radio("Nguồn dữ liệu:", ("Dữ liệu mẫu (Play Golf)", "Dữ liệu mẫu (Tax Evade)", "Tải file CSV"))
     
     df = None
@@ -57,58 +46,72 @@ with col1:
             
         all_cols = df.columns.tolist()
         
-        # Chọn Target
-        target_col = st.selectbox("Cột kết quả (Target):", all_cols, index=len(all_cols)-1)
+        # 1. Chọn cột Target
+        st.write("---")
+        target_col = st.selectbox("🎯 Cột kết quả (Target):", all_cols, index=len(all_cols)-1)
         
-        # Chọn ID để bỏ qua
-        potential_id = 0 if "Day" in all_cols[0] or "id" in all_cols[0].lower() else None
-        id_col = st.selectbox(
-            "Cột ID (Bỏ qua):", 
-            ["(None)"] + all_cols, 
-            index=0 if potential_id is None else potential_id + 1
+        # 2. Chọn nhiều cột cần bỏ qua (Multiselect)
+        # Tự động gợi ý các cột có tên giống ID
+        default_drop = [c for c in all_cols if "day" in c.lower() or "_raw" in c.lower() or "tid" in c.lower()]
+        
+        drop_cols = st.multiselect(
+            "🚫 Chọn các cột cần bỏ qua (ID, Nhiễu...):", 
+            options=all_cols,
+            default=default_drop
         )
-        
-        # Khởi tạo Session State để lưu model
+        st.caption("Gợi ý: Hãy bỏ các cột mã số (Tid, ID) để tránh học vẹt.")
+
         if 'id3_model' not in st.session_state:
             st.session_state.id3_model = None
             st.session_state.feature_cols = []
 
         if st.button("▶️ Huấn luyện & Vẽ cây", type="primary"):
-            ignore_col = None if id_col == "(None)" else id_col
-            
             # Huấn luyện
             model = ID3DecisionTree()
-            model.fit(df, target_col, ignore_col)
+            # Truyền danh sách cột cần bỏ
+            model.fit(df, target_col, drop_cols)
             
-            # Lưu vào session để dùng cho phần dự đoán
             st.session_state.id3_model = model
-            st.session_state.feature_cols = [c for c in df.columns if c != target_col and c != ignore_col]
-            st.session_state.train_df = df # Lưu df để lấy giá trị cho selectbox
+            
+            # Lưu lại danh sách các cột đặc trưng (để tạo form dự đoán)
+            # Feature = Tất cả cột - Target - DropCols
+            features = [c for c in df.columns if c != target_col and c not in drop_cols]
+            st.session_state.feature_cols = features
+            st.session_state.train_df = df 
             st.rerun()
 
 with col2:
     if st.session_state.id3_model is not None:
-        st.subheader("2. Cây Quyết Định")
+        st.subheader("2. Kết quả Phân lớp")
         
-        # Vẽ cây
-        dot_data = st.session_state.id3_model.get_graphviz_dot()
-        if dot_data:
-            st.graphviz_chart(dot_data)
-        else:
-            st.warning("Cây rỗng.")
+        model = st.session_state.id3_model
+        dot_data = model.get_graphviz_dot()
+        rules_df = model.get_rules()
+        
+        tab1, tab2 = st.tabs(["🌳 Biểu đồ Cây", "📜 Các Luật Quyết định"])
+        
+        with tab1:
+            if dot_data:
+                st.graphviz_chart(dot_data)
+            else:
+                st.warning("Không thể vẽ cây (Dữ liệu quá đơn điệu hoặc lỗi).")
+        
+        with tab2:
+            if not rules_df.empty:
+                rules_df.index += 1
+                st.table(rules_df)
+            else:
+                st.info("Không sinh được luật nào.")
             
         st.divider()
         
         # --- PHẦN DỰ ĐOÁN ---
-        st.subheader("3. Dự đoán kết quả mới")
-        st.caption("Chọn các thuộc tính để xem kết quả dự đoán:")
+        st.subheader(f"3. Dự đoán: {target_col}")
         
         with st.form("prediction_form"):
             user_inputs = {}
-            # Tạo lưới 2 cột cho đẹp
             input_cols = st.columns(2)
             
-            # Tự động tạo selectbox cho từng thuộc tính
             train_df = st.session_state.train_df
             feature_cols = st.session_state.feature_cols
             
@@ -120,14 +123,14 @@ with col2:
             predict_btn = st.form_submit_button("🔮 Dự đoán ngay")
             
             if predict_btn:
-                result = st.session_state.id3_model.predict(user_inputs)
+                result = model.predict(user_inputs)
                 st.markdown(f"""
                 <div class="result-card">
-                    Kết quả: {result}
+                    Kết quả dự đoán: {result}
                 </div>
                 """, unsafe_allow_html=True)
                 
     elif df is None:
         st.info("👈 Hãy chọn dữ liệu ở cột bên trái trước.")
     else:
-        st.info("👈 Hãy nhấn nút 'Huấn luyện & Vẽ cây' để bắt đầu.")
+        st.info("👈 Nhấn nút 'Huấn luyện' để bắt đầu.")
