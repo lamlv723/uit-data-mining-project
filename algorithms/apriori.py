@@ -1,71 +1,111 @@
-# pages/1_📊_Apriori.py
-import streamlit as st
 import pandas as pd
-from algorithms.apriori import Apriori
+from itertools import combinations
 
-# Cấu hình trang
-st.set_page_config(page_title="Apriori", page_icon="📊", layout="wide")
+class Apriori:
+    def __init__(self, min_support=0.5, min_confidence=0.7):
+        self.min_support = min_support
+        self.min_confidence = min_confidence
+        self.itemsets = {}  
+        self.rules = []     
 
-# Đường dẫn file data cố định cho thuật toán này
-DATA_PATH = "data/apriori_transaction.csv"
+    def _get_support(self, transactions, itemset):
+        count = 0
+        for transaction in transactions:
+            if itemset.issubset(transaction):
+                count += 1
+        return count / len(transactions)
 
-# --- Header ---
-st.title("📊 Thuật toán Apriori: Tập phổ biến & Luật kết hợp")
-st.markdown("---")
+    def fit(self, df):
+        """
+        Input: df với 2 cột [TransactionID, Item]
+        Logic: Gom nhóm theo TransactionID để tạo thành list các tập hợp
+        """
+        # 1. Tự động lấy tên 2 cột đầu tiên
+        col_id = df.columns[0]   # Ví dụ: TransactionID
+        col_item = df.columns[1] # Ví dụ: Item
 
-# --- Layout ---
-col1, col2 = st.columns([1, 2], gap="large")
+        # 2. Chuyển đổi từ dạng bảng dọc (Long format) sang danh sách tập hợp
+        # Ví dụ: 
+        # 01, i1
+        # 01, i2  --> Tập giao dịch: {'i1', 'i2'}
+        # groupby(col_id)[col_item] sẽ gom tất cả Item của cùng 1 ID lại
+        transactions = df.groupby(col_id)[col_item].apply(set).tolist()
 
-# --- Cột trái: Tham số & Dữ liệu ---
-with col1:
-    st.subheader("1. Dữ liệu & Tham số")
-    
-    # Hiển thị dữ liệu thô
-    try:
-        df = pd.read_csv(DATA_PATH)
-        st.caption(f"Đang sử dụng dữ liệu từ: `{DATA_PATH}`")
-        st.dataframe(df, hide_index=True, use_container_width=True)
-    except FileNotFoundError:
-        st.error(f"Không tìm thấy file {DATA_PATH}. Hãy chạy setup_project.py trước!")
-        st.stop()
-
-    st.write("---")
-    
-    # Form nhập tham số
-    with st.form("apriori_form"):
-        min_supp = st.slider("Min Support (Độ phổ biến tối thiểu)", 0.0, 1.0, 0.4, 0.05)
-        min_conf = st.slider("Min Confidence (Độ tin cậy tối thiểu)", 0.0, 1.0, 0.7, 0.05)
+        # --- BẮT ĐẦU THUẬT TOÁN APRIORI ---
         
-        submitted = st.form_submit_button("▶️ Chạy thuật toán")
+        # Tạo tập phổ biến 1 phần tử (L1)
+        all_items = set()
+        for t in transactions:
+            all_items.update(t)
+            
+        current_l = {}
+        for item in all_items:
+            itemset = frozenset([item])
+            supp = self._get_support(transactions, itemset)
+            if supp >= self.min_support:
+                current_l[itemset] = supp
+        
+        self.itemsets.update(current_l)
 
-# --- Cột phải: Kết quả ---
-with col2:
-    st.subheader("2. Kết quả phân tích")
-    
-    if submitted:
-        # Gọi thuật toán
-        model = Apriori(min_support=min_supp, min_confidence=min_conf)
-        model.fit(DATA_PATH)
-        
-        # Lấy kết quả
-        df_itemsets = model.get_itemsets()
-        df_rules = model.get_rules()
-        
-        # Hiển thị bằng Tab
-        tab1, tab2 = st.tabs(["📦 Tập phổ biến (Frequent Itemsets)", "🔗 Luật kết hợp (Rules)"])
-        
-        with tab1:
-            if not df_itemsets.empty:
-                st.info(f"Tìm thấy {len(df_itemsets)} tập phổ biến.")
-                st.dataframe(df_itemsets, use_container_width=True, height=400)
-            else:
-                st.warning("Không tìm thấy tập phổ biến nào với ngưỡng Support này.")
+        # Vòng lặp tìm k-itemset (k=2, 3...)
+        k = 2
+        while True:
+            candidates = set()
+            l_list = list(current_l.keys())
+            
+            for i in range(len(l_list)):
+                for j in range(i + 1, len(l_list)):
+                    # Hợp 2 tập lại
+                    union_set = l_list[i].union(l_list[j])
+                    if len(union_set) == k:
+                        candidates.add(union_set)
+            
+            next_l = {}
+            for cand in candidates:
+                supp = self._get_support(transactions, cand)
+                if supp >= self.min_support:
+                    next_l[cand] = supp
+            
+            if not next_l:
+                break
                 
-        with tab2:
-            if not df_rules.empty:
-                st.info(f"Tìm thấy {len(df_rules)} luật kết hợp.")
-                st.dataframe(df_rules, use_container_width=True)
-            else:
-                st.warning("Không tìm thấy luật nào với ngưỡng Confidence này.")
-    else:
-        st.info("👈 Nhấn nút 'Chạy thuật toán' để xem kết quả.")
+            self.itemsets.update(next_l)
+            current_l = next_l
+            k += 1
+
+    def generate_rules(self):
+        self.rules = []
+        for itemset, support in self.itemsets.items():
+            if len(itemset) < 2:
+                continue
+            
+            for i in range(1, len(itemset)):
+                for lhs in combinations(itemset, i):
+                    lhs = frozenset(lhs)
+                    rhs = itemset - lhs
+                    
+                    if lhs in self.itemsets:
+                        conf = support / self.itemsets[lhs]
+                        if conf >= self.min_confidence:
+                            self.rules.append({
+                                'Vế trái': ', '.join(list(lhs)),
+                                'Vế phải': ', '.join(list(rhs)),
+                                'Support': round(support, 4),
+                                'Confidence': round(conf, 4)
+                            })
+        
+        if not self.rules:
+            return pd.DataFrame()
+        return pd.DataFrame(self.rules)
+
+    def get_itemsets(self):
+        data = []
+        for itemset, supp in self.itemsets.items():
+            data.append({
+                "Tập hạng mục": ', '.join(list(itemset)),
+                "Kích thước": len(itemset),
+                "Support": round(supp, 4)
+            })
+        if not data:
+            return pd.DataFrame()
+        return pd.DataFrame(data)
