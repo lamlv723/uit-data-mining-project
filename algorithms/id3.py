@@ -98,12 +98,20 @@ class ID3DecisionTree:
             current_id = str(node_counter)
             node_counter += 1
             if not isinstance(node, dict):
-                dot.append(f'{current_id} [label="{node}", style=filled, fillcolor="#ff4b4b", fontcolor=white, shape=oval];')
+                # dot.append(f'{current_id} [label="{node}", style=filled, fillcolor="#ff4b4b", fontcolor=white, shape=oval];')
+                dot.append(
+                    f'{current_id} [label="{node}", style=filled, fillcolor="#ff4b4b", fontcolor="white", shape=ellipse];'
+                )
+
                 if parent_id is not None:
                     dot.append(f'{parent_id} -> {current_id} [label="{edge_label}"];')
                 return
             attr = list(node.keys())[0]
-            dot.append(f'{current_id} [label="{attr}", style=filled, fillcolor="#f0f2f6"];')
+            # dot.append(f'{current_id} [label="{attr}", style=filled, fillcolor="#f0f2f6"];')
+            dot.append(
+                f'{current_id} [label="{attr}", style=filled, fillcolor="#f0f2f6", shape=box];'
+            )
+
             if parent_id is not None:
                 dot.append(f'{parent_id} -> {current_id} [label="{edge_label}"];')
             for val, child in node[attr].items():

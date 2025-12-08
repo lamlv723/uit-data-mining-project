@@ -17,13 +17,27 @@ st.markdown("""
 
 st.markdown('<div class="main-header">Cây Quyết Định (ID3)</div>', unsafe_allow_html=True)
 
+def reset_state():
+    """Hàm này sẽ xóa model cũ khi người dùng đổi dữ liệu"""
+    if 'id3_model' in st.session_state:
+        del st.session_state['id3_model']
+    if 'feature_cols' in st.session_state:
+        del st.session_state['feature_cols']
+    # Xóa cache dữ liệu của Streamlit (nếu có dùng @st.cache)
+    st.cache_data.clear()
+
+
 col1, col2 = st.columns([1, 2], gap="large")
 
 with col1:
     st.subheader("1. Cấu hình Dữ liệu")
     
-    data_source = st.radio("Nguồn dữ liệu:", ("Dữ liệu mẫu (Play Golf)", "Dữ liệu mẫu (Tax Evade)", "Tải file CSV"))
-    
+    data_source = st.radio(
+        "Nguồn dữ liệu:", 
+        ("Dữ liệu mẫu (Play Golf)", "Dữ liệu mẫu (Tax Evade)", "Tải file CSV"),
+        on_change=reset_state
+    )
+
     df = None
     if data_source == "Dữ liệu mẫu (Play Golf)":
         try:
