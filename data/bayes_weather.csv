@@ -1,0 +1,10 @@
+Weather,Temperature,Humidity,Wind,Play
+Sunny,Hot,High,Weak,No
+Sunny,Hot,High,Strong,No
+Overcast,Hot,High,Strong,Yes
+Rain,Cool,High,Weak,Yes
+Rain,Cold,High,Strong,No
+Rain,Cold,Normal,Strong,No
+Overcast,Cold,Normal,Weak,Yes
+Sunny,Cool,High,Weak,No
+Sunny,Cold,Normal,Weak,Yes
