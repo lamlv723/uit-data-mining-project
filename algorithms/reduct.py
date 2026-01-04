@@ -34,10 +34,12 @@ class RoughSets:
         pos_region = self.get_lower_approximation(df, conditional_attrs, decision_attr)
         return len(pos_region) / len(df)
 
-    def fit(self, df, target_col, id_col=None):
+    def fit(self, df, target_col, drop_cols=None):
         data = df.copy()
-        if id_col and id_col in data.columns:
-            data = data.drop(columns=[id_col])
+        # Xử lý loại bỏ nhiều cột cùng lúc
+        if drop_cols:
+            cols_to_drop = [c for c in drop_cols if c in data.columns]
+            data = data.drop(columns=cols_to_drop)
             
         decision_attr = target_col
         conditional_attrs = [c for c in data.columns if c != decision_attr]
@@ -77,18 +79,20 @@ class RoughSets:
         return self.reducts, self.core
 
     # --- HÀM SINH LUẬT ---
-    def get_rules(self, df, target_col, id_col=None):
+    def get_rules(self, df, target_col, drop_cols=None):
         """Sinh luật từ các Reducts đã tìm được"""
         if not self.reducts:
             return pd.DataFrame()
 
         data = df.copy()
-        if id_col and id_col in data.columns:
-            data = data.drop(columns=[id_col])
+        # Xử lý loại bỏ nhiều cột cùng lúc
+        if drop_cols:
+            cols_to_drop = [c for c in drop_cols if c in data.columns]
+            data = data.drop(columns=cols_to_drop)
 
         all_rules = []
         
-        # Duyệt qua từng Reduct để sinh luật
+        # Duyệt Reduct để sinh luật
         for i, reduct in enumerate(self.reducts):
             cols = list(reduct) + [target_col]
             

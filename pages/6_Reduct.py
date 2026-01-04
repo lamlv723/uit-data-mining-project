@@ -56,24 +56,32 @@ with col1:
         
         st.write("---")
         target_col = st.selectbox("🎯 Thuộc tính Quyết định (Decision):", all_cols, index=len(all_cols)-1, on_change=reset_state)
-        id_col = st.selectbox("🚫 Cột ID (Bỏ qua):", ["(None)"] + all_cols, index=1, on_change=reset_state)
+        
+        # --- CẬP NHẬT: CHO PHÉP CHỌN NHIỀU CỘT BỎ QUA ---
+        # Tự động gợi ý cột đầu tiên (thường là ID)
+        default_drop = [all_cols[0]] if all_cols else []
+        
+        drop_cols = st.multiselect(
+            "🚫 Cột cần bỏ qua (ID, Nhiễu...):", 
+            options=all_cols,
+            default=default_drop,
+            on_change=reset_state
+        )
         
         if st.button("▶️ Tìm Reduct & Sinh Luật", type="primary"):
-            ignore_col = None if id_col == "(None)" else id_col
-            
             model = RoughSets()
-            model.fit(df, target_col, ignore_col)
+            model.fit(df, target_col, drop_cols)
             
             st.session_state.reduct_model = model
             st.session_state.reduct_df = df
-            st.session_state.reduct_ignore_col = ignore_col
+            st.session_state.reduct_drop_cols = drop_cols
             st.session_state.reduct_target = target_col
 
 with col2:
     if 'reduct_model' in st.session_state:
         model = st.session_state.reduct_model
         data_df = st.session_state.reduct_df
-        ignore_col = st.session_state.reduct_ignore_col
+        drop_cols = st.session_state.reduct_drop_cols
         target_col = st.session_state.reduct_target
         
         st.subheader("2. Kết quả Phân tích")
@@ -81,7 +89,6 @@ with col2:
         # Hiển thị độ phụ thuộc
         st.info(f"📊 Độ phụ thuộc (Dependency): **{model.dependency:.4f}**")
         
-        # TAB HIỂN THỊ
         tab1, tab2 = st.tabs(["✂️ Tập Rút Gọn (Reducts) & Core", "📜 Các Luật (Rules)"])
         
         with tab1:
@@ -107,7 +114,7 @@ with col2:
         
         with tab2:
             st.write("### Danh sách Luật sinh từ Reducts")
-            rules_df = model.get_rules(data_df, target_col, ignore_col)
+            rules_df = model.get_rules(data_df, target_col, drop_cols)
             
             if not rules_df.empty:
                 st.dataframe(rules_df, use_container_width=True, hide_index=True)
