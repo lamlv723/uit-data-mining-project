@@ -15,12 +15,22 @@ class NaiveBayes:
         self.target_col = target_col
         self.classes = df[target_col].unique()
         self.features = [col for col in df.columns if col != target_col]
+
+        # Xử lý loại bỏ cột nhiễu
+        data = df.copy()
+        if drop_cols:
+            cols_to_drop = [c for c in drop_cols if c in data.columns]
+            data = data.drop(columns=cols_to_drop)
+
+        self.target_col = target_col
+        self.classes = data[target_col].unique()
+        self.features = [col for col in data.columns if col != target_col]
         
         # Lưu vocabulary cho từng cột (dùng cho Laplace: số giá trị rời rạc r)
         for col in self.features:
             self.vocab[col] = df[col].unique()
 
-        total_samples = len(df)
+        total_samples = len(data)
         num_classes = len(self.classes)
 
         # 1. Tính xác suất tiên nghiệm P(Ci)

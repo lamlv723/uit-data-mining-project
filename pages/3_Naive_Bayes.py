@@ -17,7 +17,6 @@ st.markdown("""
 
 st.markdown('<div class="main-header">Phân lớp Naive Bayes</div>', unsafe_allow_html=True)
 
-# Hàm Reset State
 def reset_state():
     if 'nb_model' in st.session_state:
         del st.session_state['nb_model']
@@ -27,19 +26,21 @@ col1, col2 = st.columns([1, 2], gap="large")
 with col1:
     st.subheader("1. Cấu hình Dữ liệu")
     
-    # Chọn nguồn dữ liệu
+    # Cấu hình nguồn dữ liệu
     data_source = st.radio(
         "Nguồn dữ liệu:", 
-        ("Dữ liệu mẫu (Weather)", "Tải file CSV"),
+        ("Dữ liệu mẫu (Play Golf)", "Tải file CSV"),
         on_change=reset_state
     )
     
     df = None
-    if data_source == "Dữ liệu mẫu (Weather)":
+    if data_source == "Dữ liệu mẫu (Play Golf)":
         try:
-            df = pd.read_csv("data/bayes_weather.csv")
-            st.success("Đã tải dữ liệu Weather")
-        except: st.error("Lỗi đọc file data.")
+            # Đọc file bạn đã tạo sẵn
+            df = pd.read_csv("data/bayes_play_golf.csv")
+            st.success("Dữ liệu mẫu (Play Golf)")
+        except FileNotFoundError:
+            st.error("Không tìm thấy file data/bayes_play_golf.csv")
     else:
         uploaded_file = st.file_uploader("Upload CSV", type=['csv'], on_change=reset_state)
         if uploaded_file:
@@ -52,20 +53,32 @@ with col1:
         all_cols = df.columns.tolist()
         
         st.write("---")
+        # Chọn Target (mặc định cột cuối)
         target_col = st.selectbox("🎯 Cột kết quả (Target):", all_cols, index=len(all_cols)-1, on_change=reset_state)
+        
+        # --- TỰ ĐỘNG CHỌN CỘT NHIỄU (Feature Selection) ---
+        # Tìm các cột có tên chứa "Day", "ID" để set mặc định
+        default_drop = [c for c in all_cols if "day" in c.lower() or "id" == c.lower()]
+        
+        drop_cols = st.multiselect(
+            "🚫 Cột cần bỏ qua (ID, Nhiễu...):",
+            options=all_cols,
+            default=default_drop,
+            on_change=reset_state
+        )
         
         # Tùy chọn Laplace
         use_laplace = st.checkbox("Sử dụng làm trơn Laplace", value=False, on_change=reset_state)
-        if use_laplace:
-            st.caption("Công thức: P(xi|c) = (count + 1) / (total + số giá trị rời rạc)")
         
         if st.button("▶️ Huấn luyện Mô hình", type="primary"):
             model = NaiveBayes(use_laplace=use_laplace)
-            model.fit(df, target_col)
+            # Truyền drop_cols vào hàm fit
+            model.fit(df, target_col, drop_cols)
             
             st.session_state.nb_model = model
-            st.session_state.nb_features = [c for c in df.columns if c != target_col]
-            st.session_state.nb_df = df # Lưu để lấy unique values cho form nhập liệu
+            # Lưu danh sách đặc trưng (trừ target và các cột bị drop)
+            st.session_state.nb_features = [c for c in df.columns if c != target_col and c not in drop_cols]
+            st.session_state.nb_df = df 
 
 with col2:
     if 'nb_model' in st.session_state:
@@ -77,25 +90,19 @@ with col2:
         tab1, tab2 = st.tabs(["📊 Xác suất Tiên nghiệm P(C)", "📈 Xác suất Có điều kiện P(X|C)"])
         
         with tab1:
-            # Hiển thị P(Ci)
             prior_df = pd.DataFrame(list(priors.items()), columns=["Lớp (Class)", "Xác suất P(C)"])
             st.table(prior_df)
             
         with tab2:
-            # Hiển thị P(Xk|Ci) cho từng thuộc tính
             feature_selected = st.selectbox("Chọn thuộc tính để xem:", list(likelihoods.keys()))
-            
             if feature_selected:
                 data_dict = likelihoods[feature_selected]
-                # Chuyển đổi dict lồng nhau thành DataFrame
-                # Index là Class, Columns là Giá trị thuộc tính
                 df_view = pd.DataFrame(data_dict).T 
                 st.write(f"**P({feature_selected} | Lớp)**")
                 st.dataframe(df_view.style.format("{:.4f}"))
 
         st.divider()
         
-        # --- PHẦN DỰ ĐOÁN ---
         st.subheader(f"3. Dự đoán: {target_col}")
         
         with st.form("nb_predict_form"):
