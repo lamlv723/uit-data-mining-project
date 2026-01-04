@@ -4,7 +4,7 @@ from algorithms.apriori import Apriori
 from sidebar import render_sidebar
 
 # Cấu hình & Sidebar
-st.set_page_config(page_title="Apriori", layout="wide")
+st.set_page_config(page_title="Tập Phổ Biến & Luật Kết Hợp", layout="wide")
 render_sidebar()
 
 # CSS Tùy chỉnh
