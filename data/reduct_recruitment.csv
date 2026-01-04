@@ -1,9 +1,9 @@
-Candidate,Degree,Experience,English,Reference,Decision
-X1,MBA,Viral,Good,Excellent,Accepted
-X4,MSC,High,Good,Average,Accepted
-X6,MSC,High,Good,Excellent,Accepted
-X7,MBA,High,None,Good,Accepted
-X2,MBA,Low,Good,Average,Rejected
-X3,MCE,Low,Good,Good,Rejected
-X5,MSC,Viral,Good,Average,Rejected
-X8,MCE,Low,None,Excellent,Rejected
+Ứng viên,Bằng cấp,Kinh nghiệm,Tiếng anh,Giới thiệu,Tuyển dụng
+x1,MBA,Trung bình,Biết,Xuất sắc,Chấp nhận
+x2,MBA,Ít,Biết,Trung bình,Loại
+x3,MCE,Ít,Biết,Tốt,Loại
+x4,MSc,Nhiều,Biết,Trung bình,Chấp nhận
+x5,MSc,Trung bình,Biết,Trung bình,Loại
+x6,MSc,Nhiều,Biết,Xuất sắc,Chấp nhận
+x7,MBA,Nhiều,Không,Tốt,Chấp nhận
+x8,MCE,Ít,Không,Xuất sắc,Loại
