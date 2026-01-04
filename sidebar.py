@@ -73,6 +73,7 @@ def render_sidebar():
         # --- Section 2: Classification ---
         st.markdown('<div class="sidebar-section">Classification</div>', unsafe_allow_html=True)
         st.page_link("pages/2_Decision_Tree.py", label="Cây Quyết Định (ID3)", icon="🌳")
+        st.page_link("pages/7_CART.py", label="Cây Quyết Định (Chỉ mục Gini)", icon="🌳")
         st.page_link("pages/3_Naive_Bayes.py", label="Naive Bayes", icon="🧠")
 
         # --- Section 3: Clustering ---
