@@ -52,7 +52,7 @@ with col1:
     # Hiển thị dữ liệu thô
     if df is not None:
         with st.expander("👀 Xem dữ liệu thô", expanded=True):
-            st.dataframe(df, hide_index=True, use_container_width=True)
+            st.dataframe(df, hide_index=True, width='stretch')
 
     # Tham số
     min_supp = st.slider("Min Support", 0.0, 1.0, 0.4, 0.05)
@@ -77,14 +77,14 @@ with col2:
             
             with tab1:
                 if not itemsets.empty:
-                    st.dataframe(itemsets, use_container_width=True)
+                    st.dataframe(itemsets, width='stretch')
                     st.metric("Số lượng tập phổ biến", len(itemsets))
                 else:
                     st.warning(f"Không tìm thấy tập phổ biến với Min Support = {min_supp}")
             
             with tab2:
                 if not rules.empty:
-                    st.dataframe(rules, use_container_width=True)
+                    st.dataframe(rules, width='stretch')
                     st.metric("Số lượng luật", len(rules))
                 else:
                     st.warning(f"Không tìm thấy luật với Min Confidence = {min_conf}")
