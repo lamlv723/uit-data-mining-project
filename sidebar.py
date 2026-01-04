@@ -87,4 +87,4 @@ def render_sidebar():
         st.page_link("pages/6_Reduct.py", label="Tập Thô (Reduct)", icon="🔍")
         
         st.markdown("---")
-        st.page_link("Home.py", label="Trang chủ", icon="🏠")
+        st.page_link("home.py", label="Trang chủ", icon="🏠")
