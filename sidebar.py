@@ -80,7 +80,7 @@ def render_sidebar():
         # --- Section 3: Clustering ---
         st.markdown('<div class="sidebar-section">Clustering</div>', unsafe_allow_html=True)
         st.page_link("pages/4_KMeans.py", label="K-Means / K-Medoids", icon="🎯")
-        st.page_link("pages/5_Kohonen.py", label="Mạng Kohonen", icon="🕸️")
+        # st.page_link("pages/5_Kohonen.py", label="Mạng Kohonen", icon="🕸️")
 
         # --- Section 4: Preprocessing ---
         st.markdown('<div class="sidebar-section">Preprocessing</div>', unsafe_allow_html=True)
